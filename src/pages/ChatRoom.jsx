@@ -45,7 +45,7 @@ function ChatRoom() {
       </Chat>
 
 
-      {openDetail && <Detail className="w-80 h-full border-l border-gray-200 bg-white" ></Detail>}
+      {/* {openDetail && <Detail className="w-80 h-full border-l border-gray-200 bg-white" ></Detail>} */}
       
     </div>
   )

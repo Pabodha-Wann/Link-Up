@@ -11,25 +11,42 @@ import Loading from './Loading'
 
 function ChatList({className,setaddMode,addMode,activeChat,setActiveChat}) {
   const [chats,setChats]=useState([]);
-  const {currentuser} = useAuth();
+  const {currentuser,fetchUserData} = useAuth();
   const [loading,setLoading]=useState(true);
+  const [allChats,setAllChats]=useState([]);
 
-
+ 
 
  useEffect(()=>{
     if (!currentuser?.uid) {
       setChats([]);
+      setAllChats([]);
       setLoading(false);
       return;
     }
 
     
-
-    const chatlistRef = doc(db,"UserChats",currentuser.uid)
-    const unSub = onSnapshot(chatlistRef,(doc)=>{
+    const fetchChats = async()=>{
+       const chatlistRef = doc(db,"UserChats",currentuser.uid)
+       const unSub = onSnapshot(chatlistRef,async(doc)=>{
       const data = doc.data();
+
+      const chatArray = data?.chats || [];
       
-      setChats(data?.chats||[]);
+
+      setChats(data?.chats || []);
+     setAllChats(data?.chats || []);
+
+      const enrichedChats = await Promise.all(
+        chatArray.map(async(chat) => {
+          const peerData = await fetchUserData(chat.receiverId);
+          return { ...chat, peerData };
+        })
+      );
+      
+      // setChats(data?.chats||[]);
+      setChats(enrichedChats);
+      setAllChats(enrichedChats);
       setLoading(false);
       
     })
@@ -37,11 +54,31 @@ function ChatList({className,setaddMode,addMode,activeChat,setActiveChat}) {
     return ()=>{
       unSub();
     }
+      
+    }
+
+    fetchChats();
+    
   },[currentuser]);
   
-  console.log(chats);
-
   
+
+  const handleSearch = (e)=>{
+    const searchTerm = e.target.value.trim().toLowerCase();
+
+    if(!searchTerm){
+      setChats(allChats);
+      return;
+    }
+
+    const filteredChats = allChats.filter((chat)=>
+      chat.peerData?.username.toLowerCase().includes(searchTerm)
+    )
+
+    setChats(filteredChats);
+
+
+  }
   
   
  return (
@@ -63,7 +100,7 @@ function ChatList({className,setaddMode,addMode,activeChat,setActiveChat}) {
       </div>
       
       <div className='mb-2'>
-          <SearchBar></SearchBar>
+          <SearchBar onChange={handleSearch}></SearchBar>
           {addMode && <AddUser setaddMode={setaddMode}/>}
       </div>
       
